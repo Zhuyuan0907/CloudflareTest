@@ -468,12 +468,14 @@ h1 {
     }
     
     .test-row {
-        grid-template-columns: 2fr 1fr;
+        grid-template-columns: 2fr 1fr 1.5fr;
         padding: 10px 12px;
     }
     
     .col-node {
-        display: none;
+        font-size: 10px;
+        line-height: 1.2;
+        word-break: break-word;
     }
     
     .ipv6-score {

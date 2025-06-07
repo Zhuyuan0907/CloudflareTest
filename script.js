@@ -26,6 +26,93 @@ const testEndpointsByPlan = {
 let initialTestCount = 0;
 let initialTestInterval = null;
 
+// Cloudflare 節點代碼到地區名稱的映射
+const coloToRegion = {
+    // 亞太地區
+    'TPE': '台北, 台灣',
+    'HKG': '香港',
+    'NRT': '東京, 日本',
+    'ICN': '首爾, 韓國',
+    'SIN': '新加坡',
+    'BKK': '曼谷, 泰國',
+    'KUL': '吉隆坡, 馬來西亞',
+    'MNL': '馬尼拉, 菲律賓',
+    'SYD': '雪梨, 澳洲',
+    'MEL': '墨爾本, 澳洲',
+    'PER': '伯斯, 澳洲',
+    'AKL': '奧克蘭, 紐西蘭',
+    'BOM': '孟買, 印度',
+    'DEL': '新德里, 印度',
+    'MAA': '清奈, 印度',
+    'CCU': '加爾各答, 印度',
+    'HYD': '海德拉巴, 印度',
+    'BLR': '班加羅爾, 印度',
+    
+    // 北美地區
+    'LAX': '洛杉磯, 美國',
+    'SFO': '舊金山, 美國',
+    'SEA': '西雅圖, 美國',
+    'ORD': '芝加哥, 美國',
+    'DFW': '達拉斯, 美國',
+    'MIA': '邁阿密, 美國',
+    'ATL': '亞特蘭大, 美國',
+    'IAD': '華盛頓特區, 美國',
+    'EWR': '紐約, 美國',
+    'YYZ': '多倫多, 加拿大',
+    'YVR': '溫哥華, 加拿大',
+    
+    // 歐洲地區
+    'LHR': '倫敦, 英國',
+    'CDG': '巴黎, 法國',
+    'FRA': '法蘭克福, 德國',
+    'AMS': '阿姆斯特丹, 荷蘭',
+    'ZUR': '蘇黎世, 瑞士',
+    'VIE': '維也納, 奧地利',
+    'ARN': '斯德哥爾摩, 瑞典',
+    'CPH': '哥本哈根, 丹麥',
+    'HEL': '赫爾辛基, 芬蘭',
+    'WAW': '華沙, 波蘭',
+    'PRG': '布拉格, 捷克',
+    'BUD': '布達佩斯, 匈牙利',
+    'SOF': '索菲亞, 保加利亞',
+    'OTP': '布加勒斯特, 羅馬尼亞',
+    'ATH': '雅典, 希臘',
+    'IST': '伊斯坦堡, 土耳其',
+    'MAD': '馬德里, 西班牙',
+    'BCN': '巴塞隆納, 西班牙',
+    'LIS': '里斯本, 葡萄牙',
+    'MXP': '米蘭, 義大利',
+    'FCO': '羅馬, 義大利',
+    'MUC': '慕尼黑, 德國',
+    'DUS': '杜塞道夫, 德國',
+    'BRU': '布魯塞爾, 比利時',
+    'OSL': '奧斯陸, 挪威',
+    
+    // 其他地區
+    'GRU': '聖保羅, 巴西',
+    'GIG': '里約熱內盧, 巴西',
+    'SCL': '聖地亞哥, 智利',
+    'BOG': '波哥大, 哥倫比亞',
+    'LIM': '利馬, 秘魯',
+    'MEX': '墨西哥城, 墨西哥',
+    'NBO': '奈洛比, 肯亞',
+    'JNB': '約翰尼斯堡, 南非',
+    'CPT': '開普敦, 南非',
+    'CAI': '開羅, 埃及',
+    'DXB': '杜拜, 阿聯酋',
+    'DOH': '杜哈, 卡達',
+    'KWI': '科威特城, 科威特',
+    'BAH': '麥納瑪, 巴林',
+    'RUH': '利雅德, 沙烏地阿拉伯',
+    'JED': '吉達, 沙烏地阿拉伯',
+    'TLV': '特拉維夫, 以色列'
+};
+
+// 獲取節點地區名稱
+function getColoRegion(colo) {
+    return coloToRegion[colo] || `${colo} (未知地區)`;
+}
+
 // 檢測IP版本
 function getIPVersion(ip) {
     if (ip.includes(':')) return 'IPv6';
@@ -298,7 +385,7 @@ function updateTestRow(row, result) {
         latencyElement.className = `col-latency ${latencyClass}`;
         animateNumber(latencyElement, currentValue, latency);
         
-        nodeElement.textContent = result.colo;
+        nodeElement.textContent = getColoRegion(result.colo);
         
     } else {
         latencyElement.textContent = '失敗';
