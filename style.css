@@ -268,6 +268,7 @@ h1 {
     padding-right: 8px;
 }
 
+
 .test-grid::-webkit-scrollbar {
     width: 4px;
 }
@@ -413,26 +414,29 @@ h1 {
     body {
         height: auto;
         min-height: 100vh;
+        overflow-y: auto;
     }
     
     .container {
         padding: 12px;
         height: auto;
         overflow: visible;
+        max-width: 100%;
     }
     
     .main-layout {
         grid-template-columns: 1fr;
         gap: 16px;
         height: auto;
-    }
-    
-    .info-panel {
-        order: 2;
+        overflow: visible;
     }
     
     .test-panel {
         order: 1;
+    }
+    
+    .info-panel {
+        order: 2;
     }
     
     .test-grid {
@@ -440,6 +444,7 @@ h1 {
         overflow: visible;
         grid-template-columns: 1fr;
         gap: 12px;
+        max-height: none;
     }
     
     .test-row {
