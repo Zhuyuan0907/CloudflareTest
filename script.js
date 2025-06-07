@@ -41,7 +41,7 @@ async function getASNInfo(ip) {
         if (response.ok) {
             const data = await response.json();
             return {
-                asn: `AS${data.asn || 'Unknown'}`,
+                asn: `${data.asn || 'Unknown'}`,
                 org: data.org || data.isp || 'Unknown',
                 country: data.country_code || 'Unknown'
             };
