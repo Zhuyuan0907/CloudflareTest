@@ -1,2 +1,0 @@
-# Redirect /trace to trace.html
-/trace    /trace.html    200
