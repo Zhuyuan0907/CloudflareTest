@@ -1,28 +1,24 @@
 // Cloudflare 測試端點 - 按方案分組
 const testEndpointsByPlan = {
     free: [
-        { name: '1.1.1.1 DNS', url: 'one.one.one.one' },
-        { name: '1.1.1.1 for Families', url: 'family.cloudflare.com' },
-        { name: 'Speed Test', url: 'speed.cloudflare.com' },
-        { name: 'Trace', url: 'cloudflare.com/cdn-cgi/trace' }
+        { name: 'Thisisch', url: 'thisisch.net/cdn-cgi/trace' }
     ],
     pro: [
-        { name: 'Workers', url: 'workers.cloudflare.com' },
-        { name: 'Pages', url: 'pages.cloudflare.com' },
-        { name: 'Images', url: 'cloudflareimages.com' },
-        { name: 'Developers', url: 'developers.cloudflare.com' }
+        { name: 'CDNJS', url: 'cdnjs.com/cdn-cgi/trace' },
+        { name: 'JSDelivr', url: 'jsdelivr.com/cdn-cgi/trace' },
+        { name: 'Node.js', url: 'nodejs.org/cdn-cgi/trace' }
     ],
     business: [
-        { name: 'Dashboard', url: 'dash.cloudflare.com' },
-        { name: 'Analytics', url: 'web-analytics.cloudflare.com' },
-        { name: 'Teams', url: 'dash.teams.cloudflare.com' },
-        { name: 'Gateway', url: 'gateway.cloudflare.com' }
+        { name: 'NAF Store', url: 'nafstore.net/cdn-cgi/trace' },
+        { name: 'Trevor Project', url: 'thetrevorproject.org/cdn-cgi/trace' },
+        { name: 'Vote America', url: 'voteamerica.com/cdn-cgi/trace' },
+        { name: 'Waver Host', url: 'waverhost.com/cdn-cgi/trace' }
     ],
     enterprise: [
-        { name: 'Cloudflare 主站', url: 'cloudflare.com' },
-        { name: 'Stream', url: 'stream.cloudflare.com' },
-        { name: 'R2', url: 'r2.dev' },
-        { name: 'Zero Trust', url: 'cloudflare.com/zero-trust' }
+        { name: 'Discord', url: 'discordapp.com/cdn-cgi/trace' },
+        { name: 'Polestar', url: 'polestar.com/cdn-cgi/trace' },
+        { name: 'Cloudflare', url: 'www.cloudflare.com/cdn-cgi/trace' },
+        { name: 'NCR', url: 'www.ncr.com/cdn-cgi/trace' }
     ]
 };
 
@@ -40,32 +36,44 @@ function getIPVersion(ip) {
 // 獲取用戶信息
 async function getUserInfo() {
     try {
-        const response = await fetch('https://1.1.1.1/cdn-cgi/trace');
-        const text = await response.text();
+        // 同時測試IPv4和IPv6
+        const [ipv4Data, ipv6Data] = await Promise.allSettled([
+            fetch('https://1.1.1.1/cdn-cgi/trace').then(r => r.text()),
+            fetch('https://[2606:4700:4700::1111]/cdn-cgi/trace').then(r => r.text()).catch(() => null)
+        ]);
         
-        const data = {};
-        text.split('\n').forEach(line => {
-            const [key, value] = line.split('=');
-            if (key && value) {
-                data[key] = value;
-            }
-        });
+        let mainData = {};
+        let ipv4 = '-', ipv6 = '-';
         
-        // 檢測IP版本並更新UI
-        const ipVersion = getIPVersion(data.ip || '');
-        if (ipVersion === 'IPv4') {
-            document.getElementById('userIPv4').textContent = data.ip || '-';
-            document.getElementById('userIPv6').textContent = '未檢測到';
-        } else if (ipVersion === 'IPv6') {
-            document.getElementById('userIPv4').textContent = '未檢測到';
-            document.getElementById('userIPv6').textContent = data.ip || '-';
+        // 處理IPv4數據
+        if (ipv4Data.status === 'fulfilled') {
+            ipv4Data.value.split('\n').forEach(line => {
+                const [key, value] = line.split('=');
+                if (key && value) {
+                    mainData[key] = value;
+                    if (key === 'ip') ipv4 = value;
+                }
+            });
         }
         
-        document.getElementById('userColo').textContent = data.colo || '-';
-        document.getElementById('warpStatus').textContent = 
-            data.warp === 'on' ? '啟用' : '關閉';
+        // 處理IPv6數據
+        if (ipv6Data.status === 'fulfilled' && ipv6Data.value) {
+            ipv6Data.value.split('\n').forEach(line => {
+                const [key, value] = line.split('=');
+                if (key === 'ip' && value) {
+                    ipv6 = value;
+                }
+            });
+        }
         
-        return data;
+        // 更新UI
+        document.getElementById('userIPv4').textContent = ipv4;
+        document.getElementById('userIPv6').textContent = ipv6;
+        document.getElementById('userColo').textContent = mainData.colo || '-';
+        document.getElementById('warpStatus').textContent = 
+            mainData.warp === 'on' ? '啟用' : '關閉';
+        
+        return mainData;
     } catch (error) {
         console.error('獲取用戶信息失敗:', error);
         return null;
@@ -74,10 +82,7 @@ async function getUserInfo() {
 
 // 測試單個端點
 async function testEndpoint(endpoint) {
-    // 處理特殊的trace URL
-    const testUrl = endpoint.url.includes('/cdn-cgi/trace') 
-        ? `https://${endpoint.url}`
-        : `https://${endpoint.url}/cdn-cgi/trace`;
+    const testUrl = `https://${endpoint.url}`;
     
     try {
         const startTime = performance.now();
@@ -125,7 +130,6 @@ function createTestRow(endpoint) {
     
     row.innerHTML = `
         <div class="col-service">${endpoint.name}</div>
-        <div class="col-url">${endpoint.url}</div>
         <div class="col-latency">
             <div class="latency-bar testing"></div>
             <div class="latency-text latency-testing">測試中</div>
@@ -136,13 +140,32 @@ function createTestRow(endpoint) {
     
     // 添加點擊事件
     row.addEventListener('click', () => {
-        const traceUrl = endpoint.url.includes('/cdn-cgi/trace') 
-            ? `https://${endpoint.url}`
-            : `https://${endpoint.url}/cdn-cgi/trace`;
-        window.open(traceUrl, '_blank');
+        window.open(`https://${endpoint.url}`, '_blank');
     });
     
     return row;
+}
+
+// 數值動畫函數
+function animateNumber(element, startValue, endValue, duration = 800) {
+    const startTime = performance.now();
+    
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // 使用緩動函數
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        const currentValue = Math.round(startValue + (endValue - startValue) * easeProgress);
+        
+        element.textContent = `${currentValue}ms`;
+        
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+    
+    requestAnimationFrame(update);
 }
 
 // 更新測試行
@@ -171,8 +194,10 @@ function updateTestRow(row, result) {
             latencyBar.style.width = `${barWidth}%`;
         }, 100);
         
-        latencyText.textContent = `${latency}ms`;
+        // 平滑數值動畫
+        const currentValue = parseInt(latencyText.textContent) || 0;
         latencyText.className = `latency-text ${latencyClass}`;
+        animateNumber(latencyText, currentValue, latency);
         
         nodeElement.textContent = result.colo;
         statusElement.textContent = '正常';
@@ -234,16 +259,12 @@ function initTestTable() {
 async function runSingleTest() {
     const rows = document.querySelectorAll('.test-row');
     
-    // 重置所有行的測試狀態
+    // 只重置進度條動畫，保持數值
     rows.forEach(row => {
         const latencyBar = row.querySelector('.latency-bar');
-        const latencyText = row.querySelector('.latency-text');
         const statusElement = row.querySelector('.col-status');
         
         latencyBar.className = 'latency-bar testing';
-        latencyBar.style.width = '0%';
-        latencyText.textContent = '測試中';
-        latencyText.className = 'latency-text latency-testing';
         statusElement.textContent = '檢測中';
         statusElement.className = 'col-status status-testing';
     });
@@ -286,6 +307,14 @@ async function refreshTests() {
 // 開始初始連續測試
 function startInitialTests() {
     initialTestCount = 0;
+    
+    // 第一次測試顯示"測試中"
+    const rows = document.querySelectorAll('.test-row');
+    rows.forEach(row => {
+        const latencyText = row.querySelector('.latency-text');
+        latencyText.textContent = '測試中';
+        latencyText.className = 'latency-text latency-testing';
+    });
     
     // 立即執行第一次測試
     runSingleTest();
