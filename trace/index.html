@@ -49,6 +49,28 @@
 
     <div id="traceOutput" class="trace-output loading">正在收集連接信息...</div>
 
+    <!-- 為無JavaScript用戶提供靜態信息 -->
+    <div id="staticInfo" style="display: none; color: #ff6666;">
+        <pre>
+=== Cloudflare 連接測試站點 ===
+
+此端點需要 JavaScript 來收集動態連接信息。
+
+請在瀏覽器中訪問完整測試：
+https://cftest.zhuyuan.tw/
+
+或使用 Cloudflare 原生 trace：
+curl https://cftest.zhuyuan.tw/cdn-cgi/trace
+
+功能說明：
+- IPv4/IPv6 雙棧檢測
+- Cloudflare 服務節點測試
+- IPv6 連通性評分
+- ASN 和 ISP 資訊
+- WARP 狀態檢測
+        </pre>
+    </div>
+
     <script>
         // Cloudflare 測試端點 - 從主網站複製
         const testEndpointsByPlan = {
@@ -270,18 +292,56 @@
         // 初始化
         async function init() {
             const outputElement = document.getElementById('traceOutput');
+            const staticInfo = document.getElementById('staticInfo');
+            
+            // 檢測是否支援JavaScript（在這裡肯定支援）
             outputElement.textContent = '正在收集連接信息，請稍候...';
             
             try {
                 const traceInfo = await collectFullTraceInfo();
                 outputElement.textContent = traceInfo;
+                outputElement.style.color = '#00ff00';
             } catch (error) {
-                outputElement.textContent = `錯誤: ${error.message}`;
+                console.error('Trace收集失敗:', error);
+                // 如果JavaScript執行失敗，顯示靜態信息
+                outputElement.style.display = 'none';
+                staticInfo.style.display = 'block';
+                staticInfo.innerHTML = `
+<pre style="color: #ff6666;">
+=== Cloudflare 連接測試站點 - 錯誤 ===
+
+無法收集動態連接信息: ${error.message}
+
+請嘗試以下方式：
+1. 在瀏覽器中訪問完整測試：
+   https://cftest.zhuyuan.tw/
+
+2. 使用 Cloudflare 原生 trace：
+   curl https://cftest.zhuyuan.tw/cdn-cgi/trace
+
+3. 檢查網絡連接和瀏覽器設置
+
+錯誤時間: ${new Date().toISOString()}
+</pre>`;
             }
         }
         
+        // 檢測運行環境
+        function detectEnvironment() {
+            // 如果是curl或其他命令行工具
+            const userAgent = navigator.userAgent.toLowerCase();
+            if (userAgent.includes('curl') || userAgent.includes('wget')) {
+                return 'curl';
+            }
+            return 'browser';
+        }
+        
         // 等待頁面加載完成
-        document.addEventListener('DOMContentLoaded', init);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
 </body>
 </html>
