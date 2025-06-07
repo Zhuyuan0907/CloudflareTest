@@ -11,38 +11,75 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="header-top">
-                <h1>Cloudflare 連接測試</h1>
-                <button id="refreshAll" class="refresh-btn" title="重新測試">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="user-info">
-                <div class="info-item">
-                    <div class="info-label">IPv4 地址</div>
-                    <div class="info-value" id="userIPv4">-</div>
+        <div class="main-layout">
+            <!-- 左側信息面板 -->
+            <div class="info-panel">
+                <div class="panel-header">
+                    <h1>Cloudflare 連接測試</h1>
+                    <button id="refreshAll" class="refresh-btn" title="重新測試">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
                 </div>
-                <div class="info-item">
-                    <div class="info-label">IPv6 地址</div>
-                    <div class="info-value" id="userIPv6">-</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">連接節點</div>
-                    <div class="info-value" id="userColo">-</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">WARP 狀態</div>
-                    <div class="info-value" id="warpStatus">-</div>
-                </div>
-            </div>
-        </header>
 
-        <div class="test-table">
-            <div class="table-body" id="testTable">
-                <!-- 測試項目將動態生成 -->
+                <!-- 連接信息 -->
+                <div class="connection-info">
+                    <h3>連接信息</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">IPv4 地址</div>
+                            <div class="info-value" id="userIPv4">檢測中...</div>
+                            <div class="info-extra" id="ipv4ASN">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">IPv6 地址</div>
+                            <div class="info-value" id="userIPv6">檢測中...</div>
+                            <div class="info-extra" id="ipv6ASN">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">連接節點</div>
+                            <div class="info-value" id="userColo">檢測中...</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">WARP 狀態</div>
+                            <div class="info-value" id="warpStatus">檢測中...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IPv6 連通性評估 -->
+                <div class="ipv6-test">
+                    <h3>IPv6 連通性評估</h3>
+                    <div class="ipv6-score">
+                        <div class="score-circle">
+                            <span class="score-value" id="ipv6Score">-</span>
+                            <span class="score-label">分</span>
+                        </div>
+                        <div class="score-details">
+                            <div class="score-item">
+                                <span class="test-name">IPv6 可用性</span>
+                                <span class="test-result" id="ipv6Available">檢測中</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="test-name">IPv6 連接</span>
+                                <span class="test-result" id="ipv6Connection">檢測中</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="test-name">DNS解析</span>
+                                <span class="test-result" id="ipv6DNS">檢測中</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側測試結果 -->
+            <div class="test-panel">
+                <h3>Cloudflare 服務測試</h3>
+                <div class="test-grid" id="testGrid">
+                    <!-- 測試項目將動態生成 -->
+                </div>
             </div>
         </div>
     </div>

@@ -33,6 +33,101 @@ function getIPVersion(ip) {
     return 'Unknown';
 }
 
+// 獲取ASN和ISP信息
+async function getASNInfo(ip) {
+    try {
+        // 使用免費的IP查詢API
+        const response = await fetch(`https://ipapi.co/${ip}/json/`);
+        if (response.ok) {
+            const data = await response.json();
+            return {
+                asn: `AS${data.asn || 'Unknown'}`,
+                org: data.org || data.isp || 'Unknown',
+                country: data.country_code || 'Unknown'
+            };
+        }
+    } catch (error) {
+        console.log('ASN查詢失敗:', error);
+    }
+    return { asn: 'Unknown', org: 'Unknown', country: 'Unknown' };
+}
+
+// IPv6連通性測試
+async function testIPv6Connectivity() {
+    const tests = {
+        available: false,
+        connection: false,
+        dns: false
+    };
+    
+    try {
+        // 測試IPv6連接到Cloudflare
+        const ipv6Response = await fetch('https://[2606:4700:4700::1111]/cdn-cgi/trace', {
+            cache: 'no-cache'
+        });
+        if (ipv6Response.ok) {
+            tests.available = true;
+            tests.connection = true;
+        }
+    } catch (error) {
+        console.log('IPv6連接測試失敗:', error);
+    }
+    
+    try {
+        // 測試IPv6 DNS解析
+        const dnsResponse = await fetch('https://cloudflare-dns.com/dns-query?name=ipv6.google.com&type=AAAA', {
+            headers: { 'Accept': 'application/dns-json' }
+        });
+        if (dnsResponse.ok) {
+            const dnsData = await dnsResponse.json();
+            if (dnsData.Answer && dnsData.Answer.length > 0) {
+                tests.dns = true;
+            }
+        }
+    } catch (error) {
+        console.log('IPv6 DNS測試失敗:', error);
+    }
+    
+    // 計算分數
+    let score = 0;
+    if (tests.available) score += 40;
+    if (tests.connection) score += 40;
+    if (tests.dns) score += 20;
+    
+    return { tests, score };
+}
+
+// 更新IPv6測試結果
+function updateIPv6TestResults(testResults) {
+    const { tests, score } = testResults;
+    
+    // 更新分數
+    document.getElementById('ipv6Score').textContent = score;
+    
+    // 更新各項測試結果
+    const availableElement = document.getElementById('ipv6Available');
+    availableElement.textContent = tests.available ? '支援' : '不支援';
+    availableElement.className = `test-result ${tests.available ? 'test-pass' : 'test-fail'}`;
+    
+    const connectionElement = document.getElementById('ipv6Connection');
+    connectionElement.textContent = tests.connection ? '正常' : '失敗';
+    connectionElement.className = `test-result ${tests.connection ? 'test-pass' : 'test-fail'}`;
+    
+    const dnsElement = document.getElementById('ipv6DNS');
+    dnsElement.textContent = tests.dns ? '正常' : '失敗';
+    dnsElement.className = `test-result ${tests.dns ? 'test-pass' : 'test-fail'}`;
+    
+    // 更新分數圓圈顏色
+    const scoreCircle = document.querySelector('.score-circle');
+    if (score >= 80) {
+        scoreCircle.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+    } else if (score >= 60) {
+        scoreCircle.style.background = 'linear-gradient(135deg, #d97706, #f59e0b)';
+    } else {
+        scoreCircle.style.background = 'linear-gradient(135deg, #dc2626, #ef4444)';
+    }
+}
+
 // 獲取用戶信息
 async function getUserInfo() {
     try {
@@ -66,12 +161,30 @@ async function getUserInfo() {
             });
         }
         
-        // 更新UI
+        // 更新基本IP信息
         document.getElementById('userIPv4').textContent = ipv4;
         document.getElementById('userIPv6').textContent = ipv6;
         document.getElementById('userColo').textContent = mainData.colo || '-';
         document.getElementById('warpStatus').textContent = 
             mainData.warp === 'on' ? '啟用' : '關閉';
+        
+        // 異步獲取ASN信息
+        if (ipv4 !== '-') {
+            getASNInfo(ipv4).then(asnInfo => {
+                const ipv4ASN = document.getElementById('ipv4ASN');
+                ipv4ASN.textContent = `${asnInfo.asn} - ${asnInfo.org}`;
+            });
+        }
+        
+        if (ipv6 !== '-') {
+            getASNInfo(ipv6).then(asnInfo => {
+                const ipv6ASN = document.getElementById('ipv6ASN');
+                ipv6ASN.textContent = `${asnInfo.asn} - ${asnInfo.org}`;
+            });
+        }
+        
+        // 執行IPv6連通性測試
+        testIPv6Connectivity().then(updateIPv6TestResults);
         
         return mainData;
     } catch (error) {
@@ -132,7 +245,6 @@ function createTestRow(endpoint) {
         <div class="col-service">${endpoint.name}</div>
         <div class="col-latency latency-testing">測試中</div>
         <div class="col-node">-</div>
-        <div class="col-status status-testing">檢測中</div>
     `;
     
     // 添加點擊事件
@@ -169,7 +281,6 @@ function animateNumber(element, startValue, endValue, duration = 800) {
 function updateTestRow(row, result) {
     const latencyElement = row.querySelector('.col-latency');
     const nodeElement = row.querySelector('.col-node');
-    const statusElement = row.querySelector('.col-status');
     
     if (result.status === 'success') {
         const latency = result.latency;
@@ -187,23 +298,19 @@ function updateTestRow(row, result) {
         animateNumber(latencyElement, currentValue, latency);
         
         nodeElement.textContent = result.colo;
-        statusElement.textContent = '正常';
-        statusElement.className = 'col-status status-success';
         
     } else {
         latencyElement.textContent = '失敗';
         latencyElement.className = 'col-latency latency-bad';
         
         nodeElement.textContent = '-';
-        statusElement.textContent = '錯誤';
-        statusElement.className = 'col-status status-error';
     }
 }
 
 // 初始化測試表格
 function initTestTable() {
-    const testTable = document.getElementById('testTable');
-    testTable.innerHTML = '';
+    const testGrid = document.getElementById('testGrid');
+    testGrid.innerHTML = '';
     
     // 按方案創建分組
     const planNames = {
@@ -239,7 +346,7 @@ function initTestTable() {
         
         planGroup.appendChild(planHeader);
         planGroup.appendChild(planRows);
-        testTable.appendChild(planGroup);
+        testGrid.appendChild(planGroup);
     });
 }
 
@@ -247,11 +354,11 @@ function initTestTable() {
 async function runSingleTest() {
     const rows = document.querySelectorAll('.test-row');
     
-    // 重置狀態指示器
+    // 重置延遲指示器
     rows.forEach(row => {
-        const statusElement = row.querySelector('.col-status');
-        statusElement.textContent = '檢測中';
-        statusElement.className = 'col-status status-testing';
+        const latencyElement = row.querySelector('.col-latency');
+        latencyElement.textContent = '測試中';
+        latencyElement.className = 'col-latency latency-testing';
     });
     
     // 並行測試所有端點
