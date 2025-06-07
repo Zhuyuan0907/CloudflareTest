@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Trace</title>
+    <style>
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: #000;
+            color: #00ff00;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.4;
+        }
+        .trace-output {
+            white-space: pre-line;
+            font-size: 14px;
+        }
+        .loading {
+            color: #ffff00;
+        }
+    </style>
+</head>
+<body>
+    <div id="traceOutput" class="trace-output loading">正在收集連接信息...</div>
+
+    <script>
+        async function collectTraceInfo() {
+            const output = [];
+            const startTime = Date.now();
+            
+            try {
+                // 獲取用戶 IP 信息
+                const [ipv4Response, ipv6Response] = await Promise.allSettled([
+                    fetch('https://1.1.1.1/cdn-cgi/trace').then(r => r.text()),
+                    fetch('https://[2606:4700:4700::1111]/cdn-cgi/trace').then(r => r.text()).catch(() => null)
+                ]);
+                
+                let mainData = {};
+                let ipv4 = null, ipv6 = null;
+                
+                // 處理 IPv4 數據
+                if (ipv4Response.status === 'fulfilled') {
+                    ipv4Response.value.split('\n').forEach(line => {
+                        const [key, value] = line.split('=');
+                        if (key && value) {
+                            mainData[key] = value;
+                            if (key === 'ip') ipv4 = value;
+                        }
+                    });
+                }
+                
+                // 處理 IPv6 數據
+                if (ipv6Response.status === 'fulfilled' && ipv6Response.value) {
+                    ipv6Response.value.split('\n').forEach(line => {
+                        const [key, value] = line.split('=');
+                        if (key === 'ip' && value) {
+                            ipv6 = value;
+                        }
+                    });
+                }
+                
+                // 獲取 ASN 信息
+                let asnInfo = { asn: 'Unknown', org: 'Unknown' };
+                const primaryIP = ipv6 || ipv4;
+                if (primaryIP) {
+                    try {
+                        const asnResponse = await fetch(`https://ipapi.co/${primaryIP}/json/`);
+                        if (asnResponse.ok) {
+                            const asnData = await asnResponse.json();
+                            asnInfo = {
+                                asn: asnData.asn || 'Unknown',
+                                org: asnData.org || asnData.isp || 'Unknown'
+                            };
+                        }
+                    } catch (e) {
+                        console.log('ASN查詢失敗:', e);
+                    }
+                }
+                
+                // 檢測連接類型
+                const hasIPv4 = ipv4 !== null;
+                const hasIPv6 = ipv6 !== null;
+                let connectionType = 'unknown';
+                if (hasIPv4 && hasIPv6) {
+                    connectionType = 'dual-stack';
+                } else if (hasIPv6) {
+                    connectionType = 'ipv6-only';
+                } else if (hasIPv4) {
+                    connectionType = 'ipv4-only';
+                }
+                
+                // 構建 trace 輸出
+                const timestamp = Math.floor(Date.now() / 1000);
+                
+                output.push(`fl=custom_trace`);
+                output.push(`h=${window.location.hostname}`);
+                if (ipv4) output.push(`ip=${ipv4}`);
+                if (ipv6) output.push(`ipv6=${ipv6}`);
+                output.push(`ts=${timestamp}.${Date.now() % 1000}`);
+                output.push(`visit_scheme=${window.location.protocol.replace(':', '')}`);
+                output.push(`uag=${navigator.userAgent}`);
+                output.push(`colo=${mainData.colo || 'Unknown'}`);
+                output.push(`loc=${mainData.loc || 'Unknown'}`);
+                output.push(`warp=${mainData.warp || 'off'}`);
+                output.push(`connection_type=${connectionType}`);
+                output.push(`asn=AS${asnInfo.asn}`);
+                output.push(`org=${asnInfo.org}`);
+                output.push(`tls=${mainData.tls || 'Unknown'}`);
+                output.push(`http=${mainData.http || 'http/1.1'}`);
+                output.push(`gateway=${mainData.gateway || 'off'}`);
+                output.push(`test_site=zhuyuan_cf_test`);
+                output.push(`collection_time=${Date.now() - startTime}ms`);
+                
+                return output.join('\n');
+                
+            } catch (error) {
+                console.error('收集 trace 信息失敗:', error);
+                return `error=failed_to_collect_trace_info\nts=${Math.floor(Date.now() / 1000)}\nmessage=${error.message}`;
+            }
+        }
+        
+        // 檢測是否為 curl 用戶
+        function isCurlUser() {
+            return navigator.userAgent.toLowerCase().includes('curl');
+        }
+        
+        // 初始化
+        async function init() {
+            const traceInfo = await collectTraceInfo();
+            const outputElement = document.getElementById('traceOutput');
+            
+            if (isCurlUser()) {
+                // 為 curl 用戶顯示純文本
+                document.body.style.background = 'transparent';
+                document.body.style.color = 'inherit';
+                outputElement.className = 'trace-output';
+                outputElement.textContent = traceInfo;
+            } else {
+                // 為瀏覽器用戶顯示格式化版本
+                outputElement.className = 'trace-output';
+                outputElement.textContent = traceInfo;
+                
+                // 添加一些說明文字
+                const explanation = document.createElement('div');
+                explanation.style.marginTop = '20px';
+                explanation.style.color = '#888';
+                explanation.style.fontSize = '12px';
+                explanation.innerHTML = `
+                    <hr style="border-color: #333; margin: 20px 0;">
+                    此頁面模擬 Cloudflare 的 /cdn-cgi/trace 功能<br>
+                    您可以使用 curl 命令訪問此頁面：<br>
+                    <code style="color: #00ff00;">curl ${window.location.href}</code>
+                `;
+                document.body.appendChild(explanation);
+            }
+        }
+        
+        // 等待頁面加載完成
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
