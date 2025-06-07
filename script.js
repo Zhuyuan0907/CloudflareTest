@@ -130,10 +130,7 @@ function createTestRow(endpoint) {
     
     row.innerHTML = `
         <div class="col-service">${endpoint.name}</div>
-        <div class="col-latency">
-            <div class="latency-bar testing"></div>
-            <div class="latency-text latency-testing">測試中</div>
-        </div>
+        <div class="col-latency latency-testing">測試中</div>
         <div class="col-node">-</div>
         <div class="col-status status-testing">檢測中</div>
     `;
@@ -170,18 +167,13 @@ function animateNumber(element, startValue, endValue, duration = 800) {
 
 // 更新測試行
 function updateTestRow(row, result) {
-    const latencyBar = row.querySelector('.latency-bar');
-    const latencyText = row.querySelector('.latency-text');
+    const latencyElement = row.querySelector('.col-latency');
     const nodeElement = row.querySelector('.col-node');
     const statusElement = row.querySelector('.col-status');
-    
-    // 停止測試動畫
-    latencyBar.classList.remove('testing');
     
     if (result.status === 'success') {
         const latency = result.latency;
         let latencyClass = 'latency-good';
-        let barWidth = Math.min(latency / 5, 100); // 最大100%，500ms為滿格
         
         if (latency > 300) {
             latencyClass = 'latency-bad';
@@ -189,29 +181,22 @@ function updateTestRow(row, result) {
             latencyClass = 'latency-medium';
         }
         
-        // 更新進度條
-        setTimeout(() => {
-            latencyBar.style.width = `${barWidth}%`;
-        }, 100);
-        
         // 平滑數值動畫
-        const currentValue = parseInt(latencyText.textContent) || 0;
-        latencyText.className = `latency-text ${latencyClass}`;
-        animateNumber(latencyText, currentValue, latency);
+        const currentValue = parseInt(latencyElement.textContent) || 0;
+        latencyElement.className = `col-latency ${latencyClass}`;
+        animateNumber(latencyElement, currentValue, latency);
         
         nodeElement.textContent = result.colo;
         statusElement.textContent = '正常';
         statusElement.className = 'col-status status-success';
         
     } else {
-        latencyText.textContent = '失敗';
-        latencyText.className = 'latency-text latency-bad';
+        latencyElement.textContent = '失敗';
+        latencyElement.className = 'col-latency latency-bad';
         
         nodeElement.textContent = '-';
         statusElement.textContent = '錯誤';
         statusElement.className = 'col-status status-error';
-        
-        latencyBar.style.width = '0%';
     }
 }
 
@@ -235,8 +220,11 @@ function initTestTable() {
         
         // 創建方案標題
         const planHeader = document.createElement('div');
-        planHeader.className = `plan-header ${plan}`;
-        planHeader.textContent = planNames[plan];
+        planHeader.className = 'plan-header';
+        planHeader.innerHTML = `
+            ${planNames[plan]}
+            <span class="plan-badge ${plan}">${plan}</span>
+        `;
         
         // 創建行容器
         const planRows = document.createElement('div');
@@ -259,12 +247,9 @@ function initTestTable() {
 async function runSingleTest() {
     const rows = document.querySelectorAll('.test-row');
     
-    // 只重置進度條動畫，保持數值
+    // 重置狀態指示器
     rows.forEach(row => {
-        const latencyBar = row.querySelector('.latency-bar');
         const statusElement = row.querySelector('.col-status');
-        
-        latencyBar.className = 'latency-bar testing';
         statusElement.textContent = '檢測中';
         statusElement.className = 'col-status status-testing';
     });
@@ -311,9 +296,9 @@ function startInitialTests() {
     // 第一次測試顯示"測試中"
     const rows = document.querySelectorAll('.test-row');
     rows.forEach(row => {
-        const latencyText = row.querySelector('.latency-text');
-        latencyText.textContent = '測試中';
-        latencyText.className = 'latency-text latency-testing';
+        const latencyElement = row.querySelector('.col-latency');
+        latencyElement.textContent = '測試中';
+        latencyElement.className = 'col-latency latency-testing';
     });
     
     // 立即執行第一次測試
