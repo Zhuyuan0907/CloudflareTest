@@ -1,20 +1,41 @@
-// Cloudflare 測試端點
-const testEndpoints = [
-    { name: 'Cloudflare 主站', url: 'cloudflare.com', plan: 'enterprise' },
-    { name: '1.1.1.1 DNS', url: 'one.one.one.one', plan: 'free' },
-    { name: 'Workers', url: 'workers.cloudflare.com', plan: 'pro' },
-    { name: 'Pages', url: 'pages.cloudflare.com', plan: 'pro' },
-    { name: 'Speed Test', url: 'speed.cloudflare.com', plan: 'free' },
-    { name: 'Analytics', url: 'analytics.cloudflare.com', plan: 'business' },
-    { name: 'Stream', url: 'stream.cloudflare.com', plan: 'enterprise' },
-    { name: 'Teams', url: 'teams.cloudflare.com', plan: 'business' },
-    { name: 'Images', url: 'images.cloudflare.com', plan: 'pro' },
-    { name: 'Zero Trust', url: 'zerotrust.cloudflare.com', plan: 'enterprise' }
-];
+// Cloudflare 測試端點 - 按方案分組
+const testEndpointsByPlan = {
+    free: [
+        { name: '1.1.1.1 DNS', url: 'one.one.one.one' },
+        { name: '1.1.1.1 for Families', url: 'family.cloudflare.com' },
+        { name: 'Speed Test', url: 'speed.cloudflare.com' },
+        { name: 'Trace', url: 'cloudflare.com/cdn-cgi/trace' }
+    ],
+    pro: [
+        { name: 'Workers', url: 'workers.cloudflare.com' },
+        { name: 'Pages', url: 'pages.cloudflare.com' },
+        { name: 'Images', url: 'cloudflareimages.com' },
+        { name: 'Developers', url: 'developers.cloudflare.com' }
+    ],
+    business: [
+        { name: 'Dashboard', url: 'dash.cloudflare.com' },
+        { name: 'Analytics', url: 'web-analytics.cloudflare.com' },
+        { name: 'Teams', url: 'dash.teams.cloudflare.com' },
+        { name: 'Gateway', url: 'gateway.cloudflare.com' }
+    ],
+    enterprise: [
+        { name: 'Cloudflare 主站', url: 'cloudflare.com' },
+        { name: 'Stream', url: 'stream.cloudflare.com' },
+        { name: 'R2', url: 'r2.dev' },
+        { name: 'Zero Trust', url: 'cloudflare.com/zero-trust' }
+    ]
+};
 
 // 全局變量
-let isContinuousTesting = false;
-let testInterval = null;
+let initialTestCount = 0;
+let initialTestInterval = null;
+
+// 檢測IP版本
+function getIPVersion(ip) {
+    if (ip.includes(':')) return 'IPv6';
+    if (ip.includes('.')) return 'IPv4';
+    return 'Unknown';
+}
 
 // 獲取用戶信息
 async function getUserInfo() {
@@ -30,8 +51,16 @@ async function getUserInfo() {
             }
         });
         
-        // 更新 UI
-        document.getElementById('userIP').textContent = data.ip || '-';
+        // 檢測IP版本並更新UI
+        const ipVersion = getIPVersion(data.ip || '');
+        if (ipVersion === 'IPv4') {
+            document.getElementById('userIPv4').textContent = data.ip || '-';
+            document.getElementById('userIPv6').textContent = '未檢測到';
+        } else if (ipVersion === 'IPv6') {
+            document.getElementById('userIPv4').textContent = '未檢測到';
+            document.getElementById('userIPv6').textContent = data.ip || '-';
+        }
+        
         document.getElementById('userColo').textContent = data.colo || '-';
         document.getElementById('warpStatus').textContent = 
             data.warp === 'on' ? '啟用' : '關閉';
@@ -45,7 +74,10 @@ async function getUserInfo() {
 
 // 測試單個端點
 async function testEndpoint(endpoint) {
-    const testUrl = `https://${endpoint.url}/cdn-cgi/trace`;
+    // 處理特殊的trace URL
+    const testUrl = endpoint.url.includes('/cdn-cgi/trace') 
+        ? `https://${endpoint.url}`
+        : `https://${endpoint.url}/cdn-cgi/trace`;
     
     try {
         const startTime = performance.now();
@@ -86,7 +118,7 @@ async function testEndpoint(endpoint) {
 }
 
 // 創建測試行
-function createTestRow(endpoint, index) {
+function createTestRow(endpoint) {
     const row = document.createElement('div');
     row.className = 'test-row';
     row.dataset.endpoint = endpoint.url;
@@ -94,7 +126,6 @@ function createTestRow(endpoint, index) {
     row.innerHTML = `
         <div class="col-service">${endpoint.name}</div>
         <div class="col-url">${endpoint.url}</div>
-        <div class="col-plan plan-${endpoint.plan}">${endpoint.plan}</div>
         <div class="col-latency">
             <div class="latency-bar testing"></div>
             <div class="latency-text latency-testing">測試中</div>
@@ -105,7 +136,10 @@ function createTestRow(endpoint, index) {
     
     // 添加點擊事件
     row.addEventListener('click', () => {
-        window.open(`https://${endpoint.url}/cdn-cgi/trace`, '_blank');
+        const traceUrl = endpoint.url.includes('/cdn-cgi/trace') 
+            ? `https://${endpoint.url}`
+            : `https://${endpoint.url}/cdn-cgi/trace`;
+        window.open(traceUrl, '_blank');
     });
     
     return row;
@@ -161,9 +195,38 @@ function initTestTable() {
     const testTable = document.getElementById('testTable');
     testTable.innerHTML = '';
     
-    testEndpoints.forEach((endpoint, index) => {
-        const row = createTestRow(endpoint, index);
-        testTable.appendChild(row);
+    // 按方案創建分組
+    const planNames = {
+        free: 'Free Plan',
+        pro: 'Pro Plan',
+        business: 'Business Plan',
+        enterprise: 'Enterprise Plan'
+    };
+    
+    Object.entries(testEndpointsByPlan).forEach(([plan, endpoints]) => {
+        // 創建方案分組
+        const planGroup = document.createElement('div');
+        planGroup.className = 'plan-group';
+        
+        // 創建方案標題
+        const planHeader = document.createElement('div');
+        planHeader.className = `plan-header ${plan}`;
+        planHeader.textContent = planNames[plan];
+        
+        // 創建行容器
+        const planRows = document.createElement('div');
+        planRows.className = 'plan-rows';
+        
+        // 為每個端點創建行
+        endpoints.forEach(endpoint => {
+            const row = createTestRow(endpoint);
+            row.dataset.plan = plan;
+            planRows.appendChild(row);
+        });
+        
+        planGroup.appendChild(planHeader);
+        planGroup.appendChild(planRows);
+        testTable.appendChild(planGroup);
     });
 }
 
@@ -186,57 +249,66 @@ async function runSingleTest() {
     });
     
     // 並行測試所有端點
-    const testPromises = Array.from(rows).map(async (row, index) => {
-        const endpoint = testEndpoints[index];
-        const result = await testEndpoint(endpoint);
-        updateTestRow(row, result);
-        return result;
+    const testPromises = Array.from(rows).map(async (row) => {
+        const plan = row.dataset.plan;
+        const endpointUrl = row.dataset.endpoint;
+        
+        // 找到對應的端點
+        let endpoint = null;
+        Object.values(testEndpointsByPlan).forEach(endpoints => {
+            const found = endpoints.find(e => e.url === endpointUrl);
+            if (found) endpoint = found;
+        });
+        
+        if (endpoint) {
+            const result = await testEndpoint(endpoint);
+            updateTestRow(row, result);
+            return result;
+        }
     });
     
     await Promise.all(testPromises);
-}
-
-// 切換連續測試
-function toggleContinuousTesting() {
-    const toggleBtn = document.getElementById('toggleContinuous');
-    
-    if (isContinuousTesting) {
-        clearInterval(testInterval);
-        isContinuousTesting = false;
-        toggleBtn.textContent = '連續測試';
-        toggleBtn.classList.remove('active');
-    } else {
-        isContinuousTesting = true;
-        toggleBtn.textContent = '停止測試';
-        toggleBtn.classList.add('active');
-        
-        runSingleTest();
-        testInterval = setInterval(runSingleTest, 3000);
-    }
 }
 
 // 刷新測試
 async function refreshTests() {
     const refreshBtn = document.getElementById('refreshAll');
     refreshBtn.disabled = true;
-    refreshBtn.textContent = '測試中...';
     
     try {
         await getUserInfo();
         await runSingleTest();
     } finally {
         refreshBtn.disabled = false;
-        refreshBtn.textContent = '重新測試';
     }
+}
+
+// 開始初始連續測試
+function startInitialTests() {
+    initialTestCount = 0;
+    
+    // 立即執行第一次測試
+    runSingleTest();
+    initialTestCount++;
+    
+    // 每秒執行一次，共執行4次（總共5次）
+    initialTestInterval = setInterval(() => {
+        runSingleTest();
+        initialTestCount++;
+        
+        if (initialTestCount >= 4) {
+            clearInterval(initialTestInterval);
+            initialTestInterval = null;
+        }
+    }, 1000);
 }
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     initTestTable();
     
-    document.getElementById('toggleContinuous').addEventListener('click', toggleContinuousTesting);
     document.getElementById('refreshAll').addEventListener('click', refreshTests);
     
     getUserInfo();
-    runSingleTest();
+    startInitialTests();
 });
