@@ -25,7 +25,6 @@ body {
     color: var(--text-primary);
     line-height: 1.5;
     height: 100vh;
-    overflow: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -411,6 +410,11 @@ h1 {
 }
 
 @media (max-width: 768px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+    }
+    
     .container {
         padding: 12px;
         height: auto;
