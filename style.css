@@ -48,6 +48,7 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .main-layout {
@@ -436,6 +437,11 @@ h1 {
     
     .page-header h1 {
         font-size: 1.3rem;
+    }
+    
+    .refresh-btn {
+        width: 36px;
+        height: 36px;
     }
     
     .main-layout {

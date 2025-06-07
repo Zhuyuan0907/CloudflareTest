@@ -165,6 +165,7 @@ async function getUserInfo() {
         document.getElementById('userIPv4').textContent = ipv4;
         document.getElementById('userIPv6').textContent = ipv6;
         document.getElementById('userColo').textContent = mainData.colo || '-';
+        document.getElementById('userLocation').textContent = mainData.loc || '-';
         document.getElementById('warpStatus').textContent = 
             mainData.warp === 'on' ? '啟用' : '關閉';
         
