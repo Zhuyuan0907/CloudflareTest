@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare 網路測速 - Speed Test</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 頂部導覽 -->
+        <nav class="navbar">
+            <div class="nav-content">
+                <h1 class="logo">Cloudflare Speed Test</h1>
+                <a href="/" class="back-link">← 返回主頁</a>
+            </div>
+        </nav>
+
+        <!-- 主測速區域 -->
+        <div class="speed-test-container">
+            <!-- 速度儀表板 -->
+            <div class="speedometer-section">
+                <div class="speedometer">
+                    <canvas id="speedCanvas" width="400" height="400"></canvas>
+                    <div class="speed-display">
+                        <div class="speed-value" id="currentSpeed">0</div>
+                        <div class="speed-unit">Mbps</div>
+                        <div class="speed-type" id="testType">準備就緒</div>
+                    </div>
+                </div>
+                
+                <!-- GO 按鈕 -->
+                <button class="go-button" id="startTest">GO</button>
+            </div>
+
+            <!-- 測速結果 -->
+            <div class="results-section">
+                <div class="result-box">
+                    <div class="result-label">PING</div>
+                    <div class="result-value" id="pingResult">-</div>
+                    <div class="result-unit">ms</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">下載</div>
+                    <div class="result-value" id="downloadResult">-</div>
+                    <div class="result-unit">Mbps</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">上傳</div>
+                    <div class="result-value" id="uploadResult">-</div>
+                    <div class="result-unit">Mbps</div>
+                </div>
+            </div>
+
+            <!-- 連接信息 -->
+            <div class="connection-info">
+                <div class="info-card">
+                    <h3>連接信息</h3>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">IP 地址</span>
+                            <span class="info-value" id="userIP">檢測中...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">ISP</span>
+                            <span class="info-value" id="userISP">檢測中...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">位置</span>
+                            <span class="info-value" id="userLocation">檢測中...</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Cloudflare 節點</span>
+                            <span class="info-value" id="cfNode">檢測中...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>測試詳情</h3>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">連接類型</span>
+                            <span class="info-value" id="connectionType">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">測試時間</span>
+                            <span class="info-value" id="testDuration">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">數據使用</span>
+                            <span class="info-value" id="dataUsed">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">抖動</span>
+                            <span class="info-value" id="jitter">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 速度曲線圖 -->
+            <div class="chart-section">
+                <h3>實時速度曲線</h3>
+                <canvas id="speedChart" width="800" height="200"></canvas>
+            </div>
+
+            <!-- 測試歷史 -->
+            <div class="history-section">
+                <h3>測試歷史</h3>
+                <div id="testHistory" class="test-history">
+                    <p class="no-history">暫無測試記錄</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="speedtest.js"></script>
+</body>
+</html>
