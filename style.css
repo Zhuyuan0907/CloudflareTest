@@ -247,48 +247,6 @@ h1 {
     color: var(--warning-color);
 }
 
-/* 網路測速區域 */
-.speed-test {
-    background: var(--card-bg);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: var(--shadow);
-}
-
-.speed-test h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 16px;
-}
-
-.speed-test-link {
-    text-align: center;
-    padding: 20px 0;
-}
-
-.speed-test-link p {
-    color: var(--text-secondary);
-    margin-bottom: 16px;
-    font-size: 15px;
-}
-
-.speed-test-button {
-    display: inline-block;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, var(--primary-color), #3b82f6);
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: all 0.3s;
-    box-shadow: var(--shadow);
-}
-
-.speed-test-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
-}
 
 /* 右側測試面板 */
 .test-panel {

@@ -48,7 +48,7 @@ class CloudflareSpeedTest {
         this.ctx.beginPath();
         this.ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, 2.25 * Math.PI);
         this.ctx.lineWidth = 30;
-        this.ctx.strokeStyle = '#233554';
+        this.ctx.strokeStyle = '#e5e7eb';
         this.ctx.stroke();
         
         // 計算速度對應的角度
@@ -59,14 +59,10 @@ class CloudflareSpeedTest {
         
         // 繪製速度弧線
         if (speed > 0) {
-            const gradient = this.ctx.createLinearGradient(50, 50, 350, 350);
-            gradient.addColorStop(0, '#00d4ff');
-            gradient.addColorStop(1, '#00ff88');
-            
             this.ctx.beginPath();
             this.ctx.arc(centerX, centerY, radius, startAngle, endAngle);
             this.ctx.lineWidth = 30;
-            this.ctx.strokeStyle = gradient;
+            this.ctx.strokeStyle = '#2563eb';
             this.ctx.lineCap = 'round';
             this.ctx.stroke();
         }
@@ -86,7 +82,7 @@ class CloudflareSpeedTest {
             this.ctx.moveTo(x1, y1);
             this.ctx.lineTo(x2, y2);
             this.ctx.lineWidth = 2;
-            this.ctx.strokeStyle = '#8892b0';
+            this.ctx.strokeStyle = '#9ca3af';
             this.ctx.stroke();
         }
     }
@@ -95,7 +91,7 @@ class CloudflareSpeedTest {
     initChart() {
         const scale = window.devicePixelRatio;
         this.chartCanvas.width = 800 * scale;
-        this.chartCanvas.height = 200 * scale;
+        this.chartCanvas.height = 150 * scale;
         this.chartCtx.scale(scale, scale);
         
         this.clearChart();
@@ -103,15 +99,15 @@ class CloudflareSpeedTest {
 
     // 清除圖表
     clearChart() {
-        this.chartCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        this.chartCtx.fillRect(0, 0, 800, 200);
+        this.chartCtx.fillStyle = '#ffffff';
+        this.chartCtx.fillRect(0, 0, 800, 150);
         
-        // 繪製網格
-        this.chartCtx.strokeStyle = '#233554';
+        // 簡潔的網格線
+        this.chartCtx.strokeStyle = '#e5e7eb';
         this.chartCtx.lineWidth = 1;
         
-        // 水平線
-        for (let i = 0; i <= 4; i++) {
+        // 只畫幾條主要的水平線
+        for (let i = 0; i <= 3; i++) {
             const y = i * 50;
             this.chartCtx.beginPath();
             this.chartCtx.moveTo(0, y);
@@ -123,7 +119,7 @@ class CloudflareSpeedTest {
     // 更新圖表
     updateChart(speed) {
         this.speedHistory.push(speed);
-        if (this.speedHistory.length > 100) {
+        if (this.speedHistory.length > 50) {
             this.speedHistory.shift();
         }
         
@@ -131,45 +127,13 @@ class CloudflareSpeedTest {
         
         if (this.speedHistory.length < 2) return;
         
-        // 繪製速度曲線
-        const gradient = this.chartCtx.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(0, 212, 255, 0.5)');
-        gradient.addColorStop(1, 'rgba(0, 212, 255, 0.1)');
+        const maxSpeed = Math.max(...this.speedHistory, 50);
         
-        this.chartCtx.beginPath();
-        this.chartCtx.moveTo(0, 200);
-        
-        const maxSpeed = Math.max(...this.speedHistory, 100);
-        
-        this.speedHistory.forEach((speed, index) => {
-            const x = (index / (this.speedHistory.length - 1)) * 800;
-            const y = 200 - (speed / maxSpeed) * 180;
-            
-            if (index === 0) {
-                this.chartCtx.lineTo(x, y);
-            } else {
-                const prevX = ((index - 1) / (this.speedHistory.length - 1)) * 800;
-                const prevY = 200 - (this.speedHistory[index - 1] / maxSpeed) * 180;
-                
-                const cp1x = prevX + (x - prevX) / 2;
-                const cp1y = prevY;
-                const cp2x = prevX + (x - prevX) / 2;
-                const cp2y = y;
-                
-                this.chartCtx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
-            }
-        });
-        
-        this.chartCtx.lineTo(800, 200);
-        this.chartCtx.closePath();
-        this.chartCtx.fillStyle = gradient;
-        this.chartCtx.fill();
-        
-        // 繪製線條
+        // 簡潔的線條圖
         this.chartCtx.beginPath();
         this.speedHistory.forEach((speed, index) => {
             const x = (index / (this.speedHistory.length - 1)) * 800;
-            const y = 200 - (speed / maxSpeed) * 180;
+            const y = 150 - (speed / maxSpeed) * 130;
             
             if (index === 0) {
                 this.chartCtx.moveTo(x, y);
@@ -178,9 +142,24 @@ class CloudflareSpeedTest {
             }
         });
         
-        this.chartCtx.strokeStyle = '#00d4ff';
-        this.chartCtx.lineWidth = 2;
+        this.chartCtx.strokeStyle = '#2563eb';
+        this.chartCtx.lineWidth = 3;
+        this.chartCtx.lineCap = 'round';
+        this.chartCtx.lineJoin = 'round';
         this.chartCtx.stroke();
+        
+        // 添加圓點標記最新點
+        if (this.speedHistory.length > 0) {
+            const lastIndex = this.speedHistory.length - 1;
+            const lastSpeed = this.speedHistory[lastIndex];
+            const x = (lastIndex / (this.speedHistory.length - 1)) * 800;
+            const y = 150 - (lastSpeed / maxSpeed) * 130;
+            
+            this.chartCtx.beginPath();
+            this.chartCtx.arc(x, y, 4, 0, 2 * Math.PI);
+            this.chartCtx.fillStyle = '#2563eb';
+            this.chartCtx.fill();
+        }
     }
 
     // 獲取用戶信息
