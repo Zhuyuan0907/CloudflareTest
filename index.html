@@ -78,6 +78,35 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 網路測速 -->
+                <div class="speed-test">
+                    <h3>網路測速</h3>
+                    <div class="speed-controls">
+                        <button id="startSpeedTest" class="speed-test-btn">開始測速</button>
+                        <div class="speed-status" id="speedStatus">點擊開始測速</div>
+                    </div>
+                    <div class="speed-results">
+                        <div class="speed-metric">
+                            <div class="metric-label">下載速度</div>
+                            <div class="metric-value" id="downloadSpeed">-</div>
+                            <div class="metric-unit">Mbps</div>
+                        </div>
+                        <div class="speed-metric">
+                            <div class="metric-label">上傳速度</div>
+                            <div class="metric-value" id="uploadSpeed">-</div>
+                            <div class="metric-unit">Mbps</div>
+                        </div>
+                        <div class="speed-metric">
+                            <div class="metric-label">延遲</div>
+                            <div class="metric-value" id="pingLatency">-</div>
+                            <div class="metric-unit">ms</div>
+                        </div>
+                    </div>
+                    <div class="speed-progress">
+                        <div class="progress-bar" id="speedProgress"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- 右側測試結果 -->

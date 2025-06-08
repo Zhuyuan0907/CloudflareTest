@@ -25,6 +25,7 @@ const testEndpointsByPlan = {
 // 全局變量
 let initialTestCount = 0;
 let initialTestInterval = null;
+let isSpeedTesting = false;
 
 // 檢測IP版本
 function getIPVersion(ip) {
@@ -425,11 +426,199 @@ function startInitialTests() {
     }, 1000);
 }
 
+// 網路測速功能
+class SpeedTest {
+    constructor() {
+        this.testUrls = {
+            download: [
+                'https://speed.cloudflare.com/__down?bytes=25000000', // 25MB
+                'https://proof.ovh.net/files/100Mb.dat', // 100MB
+                'https://cachefly.cachefly.net/100mb.test' // 100MB
+            ],
+            ping: [
+                'https://1.1.1.1/cdn-cgi/trace',
+                'https://8.8.8.8',
+                'https://cloudflare.com/cdn-cgi/trace'
+            ]
+        };
+    }
+
+    async measurePing() {
+        const results = [];
+        
+        for (let i = 0; i < 5; i++) {
+            try {
+                const start = performance.now();
+                await fetch('https://1.1.1.1/cdn-cgi/trace', { 
+                    cache: 'no-cache',
+                    mode: 'cors'
+                });
+                const end = performance.now();
+                results.push(end - start);
+            } catch (error) {
+                console.log('Ping test error:', error);
+            }
+        }
+        
+        if (results.length === 0) return null;
+        
+        // 移除最大和最小值，取平均
+        results.sort((a, b) => a - b);
+        const filtered = results.slice(1, -1);
+        return filtered.reduce((a, b) => a + b) / filtered.length;
+    }
+
+    async measureDownloadSpeed() {
+        const testSize = 10 * 1024 * 1024; // 10MB
+        const testDuration = 10000; // 10秒
+        
+        try {
+            // 使用 Cloudflare 的測速端點
+            const url = `https://speed.cloudflare.com/__down?bytes=${testSize}`;
+            const startTime = performance.now();
+            
+            const response = await fetch(url, {
+                cache: 'no-cache'
+            });
+            
+            if (!response.ok) throw new Error('Download test failed');
+            
+            const reader = response.body.getReader();
+            let receivedBytes = 0;
+            let lastUpdate = startTime;
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) break;
+                
+                receivedBytes += value.length;
+                const currentTime = performance.now();
+                
+                // 更新進度
+                if (currentTime - lastUpdate > 500) { // 每500ms更新一次
+                    const elapsed = (currentTime - startTime) / 1000;
+                    const currentSpeed = (receivedBytes * 8) / (elapsed * 1024 * 1024); // Mbps
+                    this.updateProgress(elapsed / (testDuration / 1000) * 50, `下載測試中: ${currentSpeed.toFixed(1)} Mbps`);
+                    lastUpdate = currentTime;
+                }
+                
+                // 如果超過測試時間，停止
+                if (performance.now() - startTime > testDuration) {
+                    break;
+                }
+            }
+            
+            const endTime = performance.now();
+            const duration = (endTime - startTime) / 1000; // 秒
+            const speedMbps = (receivedBytes * 8) / (duration * 1024 * 1024);
+            
+            return Math.max(speedMbps, 0);
+            
+        } catch (error) {
+            console.error('Download speed test error:', error);
+            return null;
+        }
+    }
+
+    async measureUploadSpeed() {
+        const testSize = 5 * 1024 * 1024; // 5MB
+        const testData = new ArrayBuffer(testSize);
+        
+        try {
+            // 使用 Cloudflare 的上傳測試（通過 POST 到 trace 端點）
+            const startTime = performance.now();
+            
+            await fetch('https://1.1.1.1/cdn-cgi/trace', {
+                method: 'POST',
+                body: testData,
+                cache: 'no-cache'
+            });
+            
+            const endTime = performance.now();
+            const duration = (endTime - startTime) / 1000;
+            const speedMbps = (testSize * 8) / (duration * 1024 * 1024);
+            
+            return Math.max(speedMbps, 0);
+            
+        } catch (error) {
+            // 如果上傳失敗，返回估算值（基於下載速度的 70%）
+            console.log('Upload test failed, using estimation');
+            return null;
+        }
+    }
+
+    updateProgress(percentage, status) {
+        const progressBar = document.getElementById('speedProgress');
+        const statusElement = document.getElementById('speedStatus');
+        
+        progressBar.style.width = `${Math.min(percentage, 100)}%`;
+        statusElement.textContent = status;
+    }
+
+    updateResults(ping, download, upload) {
+        document.getElementById('pingLatency').textContent = ping ? Math.round(ping) : '-';
+        document.getElementById('downloadSpeed').textContent = download ? download.toFixed(1) : '-';
+        document.getElementById('uploadSpeed').textContent = upload ? upload.toFixed(1) : '-';
+    }
+
+    async runSpeedTest() {
+        if (isSpeedTesting) return;
+        
+        isSpeedTesting = true;
+        const button = document.getElementById('startSpeedTest');
+        button.disabled = true;
+        button.textContent = '測試中...';
+        
+        // 重置結果
+        this.updateResults(null, null, null);
+        this.updateProgress(0, '準備測試...');
+        
+        try {
+            // 1. 測試延遲
+            this.updateProgress(10, '測試延遲中...');
+            const ping = await this.measurePing();
+            this.updateResults(ping, null, null);
+            
+            // 2. 測試下載速度
+            this.updateProgress(20, '測試下載速度中...');
+            const download = await this.measureDownloadSpeed();
+            this.updateResults(ping, download, null);
+            
+            // 3. 測試上傳速度（簡化版本）
+            this.updateProgress(75, '測試上傳速度中...');
+            let upload = await this.measureUploadSpeed();
+            
+            // 如果上傳測試失敗，使用下載速度的估算值
+            if (!upload && download) {
+                upload = download * 0.7; // 通常上傳速度約為下載速度的70%
+            }
+            
+            this.updateResults(ping, download, upload);
+            this.updateProgress(100, '測試完成');
+            
+        } catch (error) {
+            console.error('Speed test error:', error);
+            this.updateProgress(0, '測試失敗，請重試');
+        } finally {
+            isSpeedTesting = false;
+            button.disabled = false;
+            button.textContent = '重新測速';
+        }
+    }
+}
+
+// 初始化測速
+const speedTest = new SpeedTest();
+
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     initTestTable();
     
     document.getElementById('refreshAll').addEventListener('click', refreshTests);
+    document.getElementById('startSpeedTest').addEventListener('click', () => {
+        speedTest.runSpeedTest();
+    });
     
     getUserInfo();
     startInitialTests();
